@@ -104,7 +104,11 @@ This is **the** step that makes the self-serve flow work. Students don't need to
 
 - Share the public `classroom` URL with students via LMS announcement.
 - Bookmark `classroom-state/state/<asg-id>/README.md` files as your roster dashboards.
-- For marking: Actions tab on `classroom` repo → **Bulk Clone** → input `assignment-id` → download artifact → run `clone.sh`.
+- For marking: easiest is the helper script.
+  - **Linux / macOS / Git-Bash:** `bin/grab.sh p1-welcomeback` → clones all student repos into `./marking/p1-welcomeback/`.
+  - **Windows PowerShell:** `.\bin\grab.ps1 -Assignment p1-welcomeback` → clones into `.\marking\p1-welcomeback\`.
+  - Or do it manually: Actions tab on `classroom` repo → **Bulk Clone** → input `assignment-id` → download artifact → run `clone.sh` / `clone.ps1`.
+- Both scripts are idempotent — re-run to `git pull` everyone's latest commits before re-marking.
 
 ## How team formation works (group assignments)
 
