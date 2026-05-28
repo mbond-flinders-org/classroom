@@ -1,14 +1,22 @@
 # P3 — YouTube Trender
 
-**Topic:** adv-soft-dev  •  **Due:** —  •  **Type:** solo
+**Topic:** adv-soft-dev  •  **Due:** —  •  **Type:** group (teams of 2)
 
-Practical 3.
+Practical 3 — pair work.
 
 
-## Accept this assignment
+## Create a new team
 
-**[👉 Click here to accept](https://github.com/mbond-flinders-org/classroom/issues/new?template=join.yml&title=join%3Ap3-youtubetrender&labels=join)**
+**[👉 Click here to create a team](https://github.com/mbond-flinders-org/classroom/issues/new?template=join.yml&title=join%3Ap3-youtubetrender+team%3Acreate%3AYOUR-TEAM-SLUG&labels=join)**
 
-Submit the prefilled issue. The bot creates your private repo, adds you as collaborator, and emails you the invite. The submitted issue auto-deletes.
+1. Click the link above.
+2. The issue title will contain `team:create:YOUR-TEAM-SLUG` — **replace `YOUR-TEAM-SLUG`** with a name you choose (lowercase letters/digits/hyphens, e.g. `pair-alice`).
+3. Submit. The bot creates your repo, then files a welcome issue inside it with a **share link** for your 1 teammate.
+
+## Joining an existing team
+
+Team membership is private — there's no list to browse. Your teammate sends you their **share link** (created automatically when they created the team).
+
+If you have a share link, just click it and submit the prefilled issue.
 
 [← back to adv-soft-dev](../)
