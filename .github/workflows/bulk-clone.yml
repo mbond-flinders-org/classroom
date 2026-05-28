@@ -1,0 +1,38 @@
+name: Bulk clone
+
+on:
+  workflow_dispatch:
+    inputs:
+      assignment_id:
+        description: 'Assignment id (matches the YAML "id:" field)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm ci || npm install
+
+      - name: Generate clone scripts
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ASSIGNMENT_ID: ${{ inputs.assignment_id }}
+          OUT_DIR: clone-out
+        run: node scripts/bulk-clone.js
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clone-${{ inputs.assignment_id }}
+          path: clone-out/
+          retention-days: 7

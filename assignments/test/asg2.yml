@@ -1,0 +1,10 @@
+id: asg2
+topic: test
+title: Group smoke test (pairs)
+template: REPLACE-ME-ORG/template-test
+type: group
+maxSize: 2
+dueDate: 2026-06-30
+description: |
+  Sample group assignment for end-to-end testing.
+  Teams of 2 — first partner creates the team, second joins from the team list.

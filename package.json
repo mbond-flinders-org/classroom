@@ -1,0 +1,20 @@
+{
+  "name": "classroom",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Private GitHub-classroom replacement: assignment repos auto-generated from templates, solo + group flows, all data stays inside a private GitHub repo.",
+  "scripts": {
+    "build-readmes": "node scripts/build-readmes.js",
+    "handle-join": "node scripts/handle-join.js",
+    "refresh-activity": "node scripts/refresh-activity.js",
+    "bulk-clone": "node scripts/bulk-clone.js"
+  },
+  "dependencies": {
+    "@octokit/rest": "^21.0.2",
+    "js-yaml": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

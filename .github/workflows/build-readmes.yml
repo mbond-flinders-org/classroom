@@ -1,0 +1,52 @@
+name: Build READMEs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assignments/**'
+      - 'state/**/repos.json'
+      - 'state/**/groups.json'
+      - 'state/**/activity.json'
+      - 'scripts/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: classroom-state
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm ci || npm install
+
+      - name: Regenerate READMEs
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/build-readmes.js
+
+      - name: Commit
+        run: |
+          git config user.name  "classroom-bot"
+          git config user.email "classroom-bot@users.noreply.github.com"
+          git add README.md assignments/ state/
+          if git diff --cached --quiet; then
+            echo "No README changes."
+            exit 0
+          fi
+          # Skip self-loop: include token in commit message? No — use [skip ci] marker
+          git commit -m "docs: regenerate READMEs [skip ci]"
+          for i in 1 2 3; do
+            git pull --rebase origin "${{ github.ref_name }}" && git push && exit 0
+            sleep 2
+          done
+          echo "Push failed"; exit 1
