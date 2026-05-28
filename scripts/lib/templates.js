@@ -19,7 +19,7 @@ function fmtDate(iso) {
 
 export function joinIssueUrl(org, classroomRepo, title) {
   const u = new URL(`https://github.com/${org}/${classroomRepo}/issues/new`);
-  u.searchParams.set('template', 'join.yml');
+  u.searchParams.set('template', 'join.md');
   u.searchParams.set('title', title);
   u.searchParams.set('labels', 'join');
   return u.toString();
