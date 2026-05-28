@@ -6,7 +6,7 @@ Private workspace for course assignments. You should only see this page if you h
 
 ## Topics
 
-- [**test**](./assignments/test/) — 2 assignments
+- [**adv-soft-dev**](./assignments/adv-soft-dev/) — 3 assignments
 
 ## How to accept an assignment
 
