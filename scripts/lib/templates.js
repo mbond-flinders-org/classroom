@@ -1,8 +1,10 @@
-// Markdown templates rendered into the various README.md files.
-// All output is committed to the private classroom repo; renders natively
-// on github.com web + mobile.
-
-import { repoNameForGroup, repoNameForSolo } from './state.js';
+// Markdown templates rendered into README.md files in two repos:
+//   - public `classroom` repo: root, topic, per-assignment landing (no roster, no team list)
+//   - private `classroom-state` repo: per-assignment roster + activity dashboard
+//
+// The public templates intentionally don't render team lists, because that
+// would expose enrollment to anyone on the internet. Team growth is driven
+// by direct-share join links, captured in the bot's welcome issue.
 
 function escapeMd(s) {
   return String(s ?? '').replace(/\|/g, '\\|');
@@ -15,7 +17,7 @@ function fmtDate(iso) {
   return d.toISOString().slice(0, 16).replace('T', ' ') + 'Z';
 }
 
-function issueNewUrl(org, classroomRepo, title) {
+export function joinIssueUrl(org, classroomRepo, title) {
   const u = new URL(`https://github.com/${org}/${classroomRepo}/issues/new`);
   u.searchParams.set('template', 'join.yml');
   u.searchParams.set('title', title);
@@ -23,13 +25,13 @@ function issueNewUrl(org, classroomRepo, title) {
   return u.toString();
 }
 
-export function rootReadme({ org, classroomRepo, topics, inviteHint }) {
+export function rootReadme({ topics }) {
   const lines = [
     '# Classroom',
     '',
-    'Private workspace for course assignments. You should only see this page if you have been invited to the GitHub org.',
+    'Course assignments. Pick a topic.',
     '',
-    inviteHint ? `> **New here?** ${inviteHint}` : '',
+    '> 🛈 Each assignment auto-creates a **private repo** in your name when you click Accept. You don\'t need to be a member of this GitHub org — the bot adds you as a collaborator on your own repo and emails you the invite.',
     '',
     '## Topics',
     '',
@@ -41,7 +43,17 @@ export function rootReadme({ org, classroomRepo, topics, inviteHint }) {
       lines.push(`- [**${t.name}**](./assignments/${t.name}/) — ${t.count} assignment${t.count === 1 ? '' : 's'}`);
     }
   }
-  lines.push('', '## How to accept an assignment', '', '1. Open a topic above.', '2. Open an assignment.', '3. Click the **Accept** link (or **Create team** / **Join team** for group assignments).', '4. Submit the prefilled issue. The bot will create your repo and email you a collaborator invite within ~30s.', '');
+  lines.push(
+    '',
+    '## How it works',
+    '',
+    '1. Open a topic above.',
+    '2. Open an assignment.',
+    '3. Click the **Accept** link (or **Create team** / **Join team** for group assignments).',
+    '4. Submit the prefilled issue — it\'ll disappear right after the bot processes it.',
+    '5. Check your GitHub email inbox for the collaborator invite to your new repo.',
+    '',
+  );
   return lines.join('\n');
 }
 
@@ -60,7 +72,8 @@ export function topicReadme({ topic, assignments }) {
   return lines.join('\n');
 }
 
-export function assignmentReadme({ org, classroomRepo, assignment, groups }) {
+// Public-facing per-assignment page. NO team list — team membership is private.
+export function assignmentReadme({ org, classroomRepo, assignment }) {
   const a = assignment;
   const lines = [
     `# ${a.title || a.id}`,
@@ -74,51 +87,40 @@ export function assignmentReadme({ org, classroomRepo, assignment, groups }) {
   }
 
   if (a.type === 'solo') {
-    const acceptUrl = issueNewUrl(org, classroomRepo, `join:${a.id}`);
+    const acceptUrl = joinIssueUrl(org, classroomRepo, `join:${a.id}`);
     lines.push(
       '## Accept this assignment',
       '',
       `**[👉 Click here to accept](${acceptUrl})**`,
       '',
-      'Submit the prefilled issue. The bot creates your private repo, adds you as collaborator, and emails you the invite.',
+      'Submit the prefilled issue. The bot creates your private repo, adds you as collaborator, and emails you the invite. The submitted issue auto-deletes.',
       '',
     );
   } else {
-    const createUrl = issueNewUrl(org, classroomRepo, `join:${a.id} team:create:YOUR-TEAM-SLUG`);
+    const createUrl = joinIssueUrl(org, classroomRepo, `join:${a.id} team:create:YOUR-TEAM-SLUG`);
     lines.push(
       '## Create a new team',
       '',
       `**[👉 Click here to create a team](${createUrl})**`,
       '',
-      `1. Click the link above. The issue title will contain \`team:create:YOUR-TEAM-SLUG\`.`,
-      `2. Replace **YOUR-TEAM-SLUG** with your chosen team name (lowercase letters, digits, hyphens — e.g. \`pair-alice\`).`,
-      `3. Submit. You'll get a repo + a join link to share with up to ${a.maxSize - 1} teammate${a.maxSize - 1 === 1 ? '' : 's'}.`,
+      `1. Click the link above.`,
+      `2. The issue title will contain \`team:create:YOUR-TEAM-SLUG\` — **replace \`YOUR-TEAM-SLUG\`** with a name you choose (lowercase letters/digits/hyphens, e.g. \`pair-alice\`).`,
+      `3. Submit. The bot creates your repo, then files a welcome issue inside it with a **share link** for your ${a.maxSize - 1} teammate${a.maxSize - 1 === 1 ? '' : 's'}.`,
       '',
-      '## Or join an existing team',
+      '## Joining an existing team',
+      '',
+      'Team membership is private — there\'s no list to browse. Your teammate sends you their **share link** (created automatically when they created the team).',
+      '',
+      'If you have a share link, just click it and submit the prefilled issue.',
       '',
     );
-
-    if (!groups.length) {
-      lines.push('_No teams yet. Be the first to create one above._', '');
-    } else {
-      lines.push('| Team | Members | Slots used | Action |', '|---|---|---|---|');
-      for (const g of groups) {
-        const used = g.members.length;
-        const full = used >= a.maxSize;
-        const members = g.members.map(m => `@${m}`).join(', ');
-        const action = full
-          ? '~~full~~'
-          : `[Join \`${g.slug}\`](${issueNewUrl(org, classroomRepo, `join:${a.id} team:join:${g.slug}`)})`;
-        lines.push(`| \`${g.slug}\` | ${members} | ${used} / ${a.maxSize} | ${action} |`);
-      }
-      lines.push('');
-    }
   }
 
   lines.push(`[← back to ${a.topic}](../)`);
   return lines.join('\n');
 }
 
+// Roster page — written to the **private** state repo.
 export function rosterReadme({ org, assignment, repos, groups, activity }) {
   const a = assignment;
   const actByRepo = new Map(activity.map(x => [x.repo, x]));
@@ -154,6 +156,71 @@ export function rosterReadme({ org, assignment, repos, groups, activity }) {
     }
   }
 
-  lines.push('', '_Auto-generated. Edit the YAML in `assignments/` instead._');
+  lines.push('', '_Auto-generated by the classroom bot. Edit `assignments/<topic>/<id>.yml` in the public `classroom` repo to change assignment metadata._');
+  return lines.join('\n');
+}
+
+// Top-level dashboard for the private state repo.
+export function stateRootReadme({ assignments }) {
+  const lines = [
+    '# Classroom — private state',
+    '',
+    'Roster, team membership, and activity dashboards. Auto-generated; do not edit by hand.',
+    '',
+    '## Assignments',
+    '',
+  ];
+  if (!assignments.length) {
+    lines.push('_No assignments configured yet._');
+  } else {
+    lines.push('| Topic | Assignment | Type | Roster |', '|---|---|---|---|');
+    for (const a of assignments) {
+      const type = a.type === 'group' ? `group (≤${a.maxSize})` : 'solo';
+      lines.push(`| ${a.topic} | ${escapeMd(a.title || a.id)} | ${type} | [→](./state/${a.id}/) |`);
+    }
+  }
+  return lines.join('\n');
+}
+
+// Welcome issue body filed inside the student's newly-created repo.
+export function welcomeIssue({ org, repo, assignment, isTeamLeader, teamSlug, joinUrl, maxTeammates }) {
+  const cloneCmd = `git clone https://github.com/${org}/${repo}.git`;
+  const lines = [
+    `Welcome to **${assignment.title || assignment.id}**!`,
+    '',
+    `Your repo is **[${org}/${repo}](https://github.com/${org}/${repo})**.`,
+    '',
+    '## Clone it',
+    '',
+    '```bash',
+    cloneCmd,
+    `cd ${repo}`,
+    '```',
+    '',
+  ];
+
+  if (isTeamLeader && joinUrl) {
+    lines.push(
+      `## 🤝 Invite your ${maxTeammates === 1 ? 'teammate' : 'teammates'}`,
+      '',
+      `You're the first member of team \`${teamSlug}\`. Send this link to your ${maxTeammates === 1 ? 'partner' : 'teammates'} so they can join:`,
+      '',
+      `**\`${joinUrl}\`**`,
+      '',
+      `_(Up to ${maxTeammates} more ${maxTeammates === 1 ? 'person' : 'people'} can join via this link.)_`,
+      '',
+    );
+  }
+
+  lines.push(
+    '## Next steps',
+    '',
+    `- Read the README in your repo.`,
+    `- Push commits as you work — that's what your instructor sees.`,
+    `- Due date: ${assignment.dueDate || 'see assignment page'}.`,
+    '',
+    '_You can close this issue once you\'ve cloned. Feel free to reopen as a personal scratchpad._',
+  );
+
   return lines.join('\n');
 }

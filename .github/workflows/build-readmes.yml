@@ -5,14 +5,15 @@ on:
     branches: [main]
     paths:
       - 'assignments/**'
-      - 'state/**/repos.json'
-      - 'state/**/groups.json'
-      - 'state/**/activity.json'
       - 'scripts/**'
+      - '.github/workflows/build-readmes.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
+
+env:
+  STATE_REPO: ${{ github.repository_owner }}/classroom-state
 
 jobs:
   build:
@@ -21,32 +22,73 @@ jobs:
       group: classroom-state
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout classroom (public)
+        uses: actions/checkout@v4
+        with:
+          path: classroom
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - run: npm ci || npm install
+      - name: Install deps
+        working-directory: classroom
+        run: npm ci || npm install
+
+      - name: Mint installation token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: classroom,classroom-state
+
+      - name: Checkout classroom-state (private)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.STATE_REPO }}
+          token: ${{ steps.app.outputs.token }}
+          path: state-repo
 
       - name: Regenerate READMEs
+        working-directory: classroom
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
+          CLASSROOM_ROOT: ${{ github.workspace }}/classroom
+          STATE_ROOT: ${{ github.workspace }}/state-repo
         run: node scripts/build-readmes.js
 
-      - name: Commit
+      - name: Commit to classroom (public)
+        working-directory: classroom
         run: |
           git config user.name  "classroom-bot"
           git config user.email "classroom-bot@users.noreply.github.com"
-          git add README.md assignments/ state/
+          git add README.md assignments/
           if git diff --cached --quiet; then
-            echo "No README changes."
-            exit 0
+            echo "No public README changes."
+          else
+            git commit -m "docs: regenerate READMEs [skip ci]"
+            for i in 1 2 3; do
+              git pull --rebase origin "${{ github.ref_name }}" && git push && break
+              sleep 2
+            done
           fi
-          # Skip self-loop: include token in commit message? No — use [skip ci] marker
-          git commit -m "docs: regenerate READMEs [skip ci]"
-          for i in 1 2 3; do
-            git pull --rebase origin "${{ github.ref_name }}" && git push && exit 0
-            sleep 2
-          done
-          echo "Push failed"; exit 1
+
+      - name: Commit to classroom-state (private)
+        working-directory: state-repo
+        env:
+          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          git config user.name  "classroom-bot"
+          git config user.email "classroom-bot@users.noreply.github.com"
+          git add README.md state/
+          if git diff --cached --quiet; then
+            echo "No state README changes."
+          else
+            git commit -m "docs: regenerate rosters [skip ci]"
+            for i in 1 2 3; do
+              git pull --rebase origin main && git push origin HEAD:main && break
+              sleep 2
+            done
+          fi

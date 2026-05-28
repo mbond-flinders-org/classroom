@@ -11,28 +11,53 @@ on:
 permissions:
   contents: read
 
+env:
+  STATE_REPO: ${{ github.repository_owner }}/classroom-state
+
 jobs:
   build-scripts:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: classroom
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - run: npm ci || npm install
+      - working-directory: classroom
+        run: npm ci || npm install
+
+      - name: Mint installation token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: classroom,classroom-state
+
+      - name: Checkout classroom-state (private)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.STATE_REPO }}
+          token: ${{ steps.app.outputs.token }}
+          path: state-repo
 
       - name: Generate clone scripts
+        working-directory: classroom
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
+          CLASSROOM_ROOT: ${{ github.workspace }}/classroom
+          STATE_ROOT: ${{ github.workspace }}/state-repo
           ASSIGNMENT_ID: ${{ inputs.assignment_id }}
-          OUT_DIR: clone-out
+          OUT_DIR: ${{ github.workspace }}/clone-out
         run: node scripts/bulk-clone.js
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: clone-${{ inputs.assignment_id }}
-          path: clone-out/
+          path: ${{ github.workspace }}/clone-out/
           retention-days: 7

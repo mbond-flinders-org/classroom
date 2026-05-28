@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  STATE_REPO: ${{ github.repository_owner }}/classroom-state
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
@@ -16,12 +19,15 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: classroom
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - run: npm ci || npm install
+      - working-directory: classroom
+        run: npm ci || npm install
 
       - name: Mint installation token
         id: app
@@ -30,25 +36,38 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
+          repositories: classroom,classroom-state
+
+      - name: Checkout classroom-state (private)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.STATE_REPO }}
+          token: ${{ steps.app.outputs.token }}
+          path: state-repo
 
       - name: Refresh
+        working-directory: classroom
         env:
           GITHUB_TOKEN: ${{ steps.app.outputs.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          CLASSROOM_ROOT: ${{ github.workspace }}/classroom
+          STATE_ROOT: ${{ github.workspace }}/state-repo
         run: node scripts/refresh-activity.js
 
       - name: Commit
+        working-directory: state-repo
+        env:
+          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           git config user.name  "classroom-bot"
           git config user.email "classroom-bot@users.noreply.github.com"
-          git add state/ assignments/ README.md
+          git add README.md state/
           if git diff --cached --quiet; then
             echo "No activity changes."
-            exit 0
+          else
+            git commit -m "chore: refresh activity [skip ci]"
+            for i in 1 2 3; do
+              git pull --rebase origin main && git push origin HEAD:main && break
+              sleep 2
+            done
           fi
-          git commit -m "chore: refresh activity [skip ci]"
-          for i in 1 2 3; do
-            git pull --rebase origin "${{ github.ref_name }}" && git push && exit 0
-            sleep 2
-          done
-          echo "Push failed"; exit 1

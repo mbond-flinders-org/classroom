@@ -8,18 +8,22 @@ permissions:
   contents: write
   issues: write
 
+env:
+  STATE_REPO: ${{ github.repository_owner }}/classroom-state
+
 jobs:
   process:
-    # Only act on join-labeled issues. Template auto-applies the `join` label,
-    # so the label is present in the `opened` event payload.
+    # Only act on join-labeled issues. The issue template auto-applies `join`.
     if: contains(github.event.issue.labels.*.name, 'join')
     runs-on: ubuntu-latest
     concurrency:
       group: classroom-state
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout classroom (public)
+        uses: actions/checkout@v4
         with:
+          path: classroom
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
@@ -27,6 +31,7 @@ jobs:
           node-version: '20'
 
       - name: Install deps
+        working-directory: classroom
         run: npm ci || npm install
 
       - name: Mint installation token
@@ -36,32 +41,63 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
+          # Need access to both repos plus the to-be-created student repos.
+          repositories: classroom,classroom-state
+
+      - name: Checkout classroom-state (private)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.STATE_REPO }}
+          token: ${{ steps.app.outputs.token }}
+          path: state-repo
+          fetch-depth: 0
 
       - name: Run handle-join
+        working-directory: classroom
         env:
           GITHUB_TOKEN: ${{ steps.app.outputs.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          STATE_REPO: ${{ env.STATE_REPO }}
+          CLASSROOM_ROOT: ${{ github.workspace }}/classroom
+          STATE_ROOT: ${{ github.workspace }}/state-repo
           ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_NODE_ID: ${{ github.event.issue.node_id }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
         run: node scripts/handle-join.js
 
-      - name: Commit state changes
+      - name: Commit changes to classroom (public)
+        working-directory: classroom
         env:
           GITHUB_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           git config user.name  "classroom-bot"
           git config user.email "classroom-bot@users.noreply.github.com"
-          git add state/ assignments/ README.md
+          git add README.md assignments/
           if git diff --cached --quiet; then
-            echo "No state changes."
-            exit 0
+            echo "No public-repo changes."
+          else
+            git commit -m "docs: regenerate landing pages [skip ci]"
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin "${{ github.ref_name }}" && git push && break
+              echo "Push attempt $i failed, retrying..."; sleep 2
+            done
           fi
-          git commit -m "state: issue #${{ github.event.issue.number }} (${{ github.event.issue.user.login }})"
-          # Rebase-retry loop in case build-readmes or another join landed first
-          for i in 1 2 3 4 5; do
-            git pull --rebase origin "${{ github.ref_name }}" && git push && exit 0
-            echo "Push attempt $i failed, retrying..."
-            sleep 2
-          done
-          echo "Push failed after retries"; exit 1
+
+      - name: Commit changes to classroom-state (private)
+        working-directory: state-repo
+        env:
+          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          git config user.name  "classroom-bot"
+          git config user.email "classroom-bot@users.noreply.github.com"
+          git add README.md state/
+          if git diff --cached --quiet; then
+            echo "No state-repo changes."
+          else
+            git commit -m "state: process issue from ${{ github.event.issue.user.login }}"
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin main && git push origin HEAD:main && break
+              echo "Push attempt $i failed, retrying..."; sleep 2
+            done
+          fi

@@ -2,7 +2,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import yaml from 'js-yaml';
 
+// ROOT       = checkout of the public `classroom` repo (config: assignments/, scripts/)
+// STATE_ROOT = checkout of the private `classroom-state` repo (state/*.json + roster READMEs)
+//
+// Workflows clone the state repo into ./state-repo by default. CLI runs locally
+// can override either.
 export const ROOT = process.env.CLASSROOM_ROOT || process.cwd();
+export const STATE_ROOT = process.env.STATE_ROOT || path.join(ROOT, 'state-repo');
 
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/;
 
@@ -12,9 +18,9 @@ export function assertSlug(slug) {
   }
 }
 
-export async function readJson(rel, fallback) {
+async function readJsonAt(root, rel, fallback) {
   try {
-    const txt = await fs.readFile(path.join(ROOT, rel), 'utf8');
+    const txt = await fs.readFile(path.join(root, rel), 'utf8');
     return JSON.parse(txt);
   } catch (e) {
     if (e.code === 'ENOENT' && fallback !== undefined) return fallback;
@@ -22,14 +28,14 @@ export async function readJson(rel, fallback) {
   }
 }
 
-export async function writeJson(rel, data) {
-  const abs = path.join(ROOT, rel);
+async function writeJsonAt(root, rel, data) {
+  const abs = path.join(root, rel);
   await fs.mkdir(path.dirname(abs), { recursive: true });
   await fs.writeFile(abs, JSON.stringify(data, null, 2) + '\n', 'utf8');
 }
 
-export async function writeText(rel, text) {
-  const abs = path.join(ROOT, rel);
+export async function writeText(root, rel, text) {
+  const abs = path.join(root, rel);
   await fs.mkdir(path.dirname(abs), { recursive: true });
   await fs.writeFile(abs, text, 'utf8');
 }
@@ -72,29 +78,13 @@ export async function loadAssignment(asgId) {
   return found;
 }
 
-export async function readRepos(asgId) {
-  return readJson(`state/${asgId}/repos.json`, []);
-}
-
-export async function readGroups(asgId) {
-  return readJson(`state/${asgId}/groups.json`, []);
-}
-
-export async function readActivity(asgId) {
-  return readJson(`state/${asgId}/activity.json`, []);
-}
-
-export async function writeRepos(asgId, data) {
-  return writeJson(`state/${asgId}/repos.json`, data);
-}
-
-export async function writeGroups(asgId, data) {
-  return writeJson(`state/${asgId}/groups.json`, data);
-}
-
-export async function writeActivity(asgId, data) {
-  return writeJson(`state/${asgId}/activity.json`, data);
-}
+// State JSON lives in the private state repo.
+export async function readRepos(asgId)   { return readJsonAt(STATE_ROOT, `state/${asgId}/repos.json`, []); }
+export async function readGroups(asgId)  { return readJsonAt(STATE_ROOT, `state/${asgId}/groups.json`, []); }
+export async function readActivity(asgId){ return readJsonAt(STATE_ROOT, `state/${asgId}/activity.json`, []); }
+export async function writeRepos(asgId, d)   { return writeJsonAt(STATE_ROOT, `state/${asgId}/repos.json`, d); }
+export async function writeGroups(asgId, d)  { return writeJsonAt(STATE_ROOT, `state/${asgId}/groups.json`, d); }
+export async function writeActivity(asgId, d){ return writeJsonAt(STATE_ROOT, `state/${asgId}/activity.json`, d); }
 
 export function repoNameForSolo(asg, username) {
   return `${asg.topic}-${asg.id}-${username}`.toLowerCase();

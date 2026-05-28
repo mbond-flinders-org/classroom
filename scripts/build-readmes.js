@@ -1,12 +1,16 @@
-// Regenerates all auto-generated README.md files from YAML + state JSON.
+// Regenerates auto-generated README.md files in two repos:
+//   - public classroom (ROOT):       root + topic + per-assignment landing pages
+//   - private classroom-state (STATE_ROOT): roster dashboards + state-root index
+//
 // Run by the build-readmes workflow on push, and called inline by handle-join
-// so the team list updates atomically with each join/create.
+// + refresh-activity so dashboards update atomically.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
   ROOT,
+  STATE_ROOT,
   listAssignments,
   readGroups,
   readRepos,
@@ -18,6 +22,7 @@ import {
   topicReadme,
   assignmentReadme,
   rosterReadme,
+  stateRootReadme,
 } from './lib/templates.js';
 
 function getOrgAndRepo() {
@@ -45,32 +50,39 @@ export async function regenerateAll({ org, classroomRepo } = {}) {
     list.sort((x, y) => String(x.dueDate || '').localeCompare(String(y.dueDate || '')) || x.id.localeCompare(y.id));
   }
 
-  // Root README
+  // ---- Public repo (ROOT) ----
   const topics = [...byTopic.entries()].map(([name, list]) => ({ name, count: list.length }));
   topics.sort((a, b) => a.name.localeCompare(b.name));
-  await writeText('README.md', rootReadme({
-    org, classroomRepo, topics,
-    inviteHint: 'You need to be a member of this GitHub org to use the classroom. Use the invite link your instructor shared.',
-  }));
+  await writeText(ROOT, 'README.md', rootReadme({ topics }));
 
-  // Topic READMEs
   for (const [topic, list] of byTopic) {
-    await writeText(`assignments/${topic}/README.md`, topicReadme({ topic, assignments: list }));
+    await writeText(ROOT, `assignments/${topic}/README.md`, topicReadme({ topic, assignments: list }));
+  }
+  for (const a of assignments) {
+    await writeText(ROOT, `assignments/${a.topic}/${a.id}/README.md`,
+      assignmentReadme({ org, classroomRepo, assignment: a }));
   }
 
-  // Per-assignment READMEs + roster READMEs
+  // ---- Private state repo (STATE_ROOT) ----
+  // Only write if STATE_ROOT actually exists (skips locally if you haven't checked it out).
+  let stateAvailable = true;
+  try { await fs.access(STATE_ROOT); } catch { stateAvailable = false; }
+  if (!stateAvailable) {
+    console.log(`STATE_ROOT (${STATE_ROOT}) not present — skipping roster output.`);
+    return;
+  }
+
+  await writeText(STATE_ROOT, 'README.md', stateRootReadme({ assignments }));
+
   for (const a of assignments) {
     const groups = a.type === 'group' ? await readGroups(a.id) : [];
     const repos = a.type === 'solo' ? await readRepos(a.id) : [];
     const activity = await readActivity(a.id);
-    await writeText(`assignments/${a.topic}/${a.id}/README.md`,
-      assignmentReadme({ org, classroomRepo, assignment: a, groups }));
-    await writeText(`state/${a.id}/README.md`,
+    await writeText(STATE_ROOT, `state/${a.id}/README.md`,
       rosterReadme({ org, assignment: a, repos, groups, activity }));
   }
 }
 
-// CLI entry — runs when executed directly, not when imported.
 const invokedDirectly = import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 if (invokedDirectly) {
   regenerateAll().then(() => {
