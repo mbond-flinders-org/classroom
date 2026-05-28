@@ -41,8 +41,9 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
-          # Need access to both repos plus the to-be-created student repos.
-          repositories: classroom,classroom-state
+          # Omit `repositories:` so the minted token spans all repos the App
+          # installation covers (templates, classroom, classroom-state, plus
+          # whatever student repos we're about to create).
 
       - name: Checkout classroom-state (private)
         uses: actions/checkout@v4

@@ -36,7 +36,6 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
-          repositories: classroom,classroom-state
 
       - name: Checkout classroom-state (private)
         uses: actions/checkout@v4
