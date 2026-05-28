@@ -2,6 +2,7 @@ id: p3-youtubetrender
 topic: adv-soft-dev
 title: "P3 — YouTube Trender"
 template: mbond-flinders-org/P3-YouTubeTrender
-type: solo
+type: group
+maxSize: 2
 description: |
-  Practical 3.
+  Practical 3 — pair work.
