@@ -7,7 +7,7 @@ Practical 3 — pair work.
 
 ## Create a new team
 
-**[👉 Click here to create a team](https://github.com/mbond-flinders-org/classroom/issues/new?template=join.yml&title=join%3Ap3-youtubetrender+team%3Acreate%3AYOUR-TEAM-SLUG&labels=join)**
+**[👉 Click here to create a team](https://github.com/mbond-flinders-org/classroom/issues/new?template=join.md&title=join%3Ap3-youtubetrender+team%3Acreate%3AYOUR-TEAM-SLUG&labels=join)**
 
 1. Click the link above.
 2. The issue title will contain `team:create:YOUR-TEAM-SLUG` — **replace `YOUR-TEAM-SLUG`** with a name you choose (lowercase letters/digits/hyphens, e.g. `pair-alice`).
