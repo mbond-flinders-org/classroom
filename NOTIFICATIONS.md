@@ -29,24 +29,16 @@ Stops random PRs from triggering workflows. They still appear in your inbox unle
 
 Even if someone opens a PR, they can't merge it. You can close + delete the branch.
 
-### c. (Optional) Disable PR creation entirely
-
-GitHub doesn't allow outright disabling PRs. Workaround: convert the README's Accept links to point to a **private fork** of `classroom` instead of the public one. Defeats the self-serve goal. Don't.
-
 ## 3. Tighten template-repo settings (one-time, per template)
 
-Students sometimes try to open issues on a template repo (asking for help). Avoid:
+Generated student repos **inherit** features from the template. Keep things students don't need turned off.
 
 For each template repo (`P1-WelcomeBack`, `P2-DogsAndBrackets`, etc) → Settings → **Features**:
 
-- ✅ Issues — _disable_
-- ✅ Discussions — _disable_
-- ✅ Projects — _disable_
-- ✅ Wiki — _disable_
-
-Generated student repos **inherit** these settings from the template. So disabling here also stops student repos from having Issues — except: we use the Issues tab to file the bot's welcome message. Keep Issues **enabled on templates** but disable Discussions/Projects/Wiki.
-
-Alternative: keep Issues enabled but set Settings → Moderation → Interaction limits → "Limit to existing users" so anonymous can't post.
+- **Issues** — keep enabled. The bot files the welcome message here, and students may use it as a scratchpad.
+- **Discussions** — disable.
+- **Projects** — disable.
+- **Wiki** — disable.
 
 ## 4. Workflow failure emails
 
