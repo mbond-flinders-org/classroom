@@ -1,5 +1,7 @@
 # Setup
 
+For ongoing use after setup is done, see **[ADDING-ASSIGNMENTS.md](./ADDING-ASSIGNMENTS.md)**.
+
 The classroom uses **two repos** in your GitHub org:
 
 | Repo | Visibility | Purpose |
