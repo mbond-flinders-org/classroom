@@ -1,6 +1,10 @@
 # Setup
 
-For ongoing use after setup is done, see **[ADDING-ASSIGNMENTS.md](./ADDING-ASSIGNMENTS.md)**.
+Other docs:
+- **[ADDING-ASSIGNMENTS.md](./ADDING-ASSIGNMENTS.md)** — day-to-day: add an assignment, see the roster, bulk-download.
+- **[NOTIFICATIONS.md](./NOTIFICATIONS.md)** — silence inbox noise.
+- **[OPERATIONS.md](./OPERATIONS.md)** — token rotation, dropped students, end-of-semester archive.
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** — how it all works under the hood.
 
 The classroom uses **two repos** in your GitHub org:
 
