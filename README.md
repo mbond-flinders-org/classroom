@@ -15,3 +15,7 @@ Course assignments. Pick a topic.
 3. Click the **Accept** link (or **Create team** / **Join team** for group assignments).
 4. Submit the prefilled issue — it'll disappear right after the bot processes it.
 5. Check your GitHub email inbox for the collaborator invite to your new repo.
+
+---
+
+<sub>**For maintainers** — see [SETUP.md](./SETUP.md) · [ADDING-ASSIGNMENTS.md](./ADDING-ASSIGNMENTS.md) · [NOTIFICATIONS.md](./NOTIFICATIONS.md) · [OPERATIONS.md](./OPERATIONS.md) · [ARCHITECTURE.md](./ARCHITECTURE.md)</sub>
