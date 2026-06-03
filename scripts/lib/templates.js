@@ -65,12 +65,12 @@ export function topicReadme({ topic, assignments }) {
   const lines = [
     `# Topic: ${topic}`,
     '',
-    '| Assignment | Type | Due | Open |',
-    '|---|---|---|---|',
+    '| Assignment | Type | Open |',
+    '|---|---|---|',
   ];
   for (const a of assignments) {
     const type = a.type === 'group' ? `group (≤${a.maxSize})` : 'solo';
-    lines.push(`| ${escapeMd(a.title || a.id)} | ${type} | ${a.dueDate || '—'} | [→](./${a.id}/) |`);
+    lines.push(`| ${escapeMd(a.title || a.id)} | ${type} | [→](./${a.id}/) |`);
   }
   lines.push('', '[← back to topics](../../)');
   return lines.join('\n');
@@ -82,7 +82,7 @@ export function assignmentReadme({ org, classroomRepo, assignment }) {
   const lines = [
     `# ${a.title || a.id}`,
     '',
-    `**Topic:** ${a.topic}  •  **Due:** ${a.dueDate || '—'}  •  **Type:** ${a.type === 'group' ? `group (teams of ${a.maxSize})` : 'solo'}`,
+    `**Topic:** ${a.topic}  •  **Type:** ${a.type === 'group' ? `group (teams of ${a.maxSize})` : 'solo'}`,
     '',
   ];
 
@@ -221,7 +221,7 @@ export function welcomeIssue({ org, repo, assignment, isTeamLeader, teamSlug, jo
     '',
     `- Read the README in your repo.`,
     `- Push commits as you work — that's what your instructor sees.`,
-    `- Due date: ${assignment.dueDate || 'see assignment page'}.`,
+    `- Due date: see Canvas.`,
     '',
     '_You can close this issue once you\'ve cloned. Feel free to reopen as a personal scratchpad._',
   );

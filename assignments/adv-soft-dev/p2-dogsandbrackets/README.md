@@ -1,6 +1,6 @@
 # P2 — Dogs and Brackets
 
-**Topic:** adv-soft-dev  •  **Due:** —  •  **Type:** solo
+**Topic:** adv-soft-dev  •  **Type:** solo
 
 Practical 2.
 

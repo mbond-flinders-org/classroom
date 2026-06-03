@@ -1,6 +1,6 @@
 # P3 — YouTube Trender
 
-**Topic:** adv-soft-dev  •  **Due:** —  •  **Type:** group (teams of 2)
+**Topic:** adv-soft-dev  •  **Type:** group (teams of 2)
 
 Practical 3 — pair work.
 

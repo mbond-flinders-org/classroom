@@ -1,6 +1,6 @@
 # P1 — Welcome Back
 
-**Topic:** adv-soft-dev  •  **Due:** —  •  **Type:** solo
+**Topic:** adv-soft-dev  •  **Type:** solo
 
 First practical of the topic. Refresh your dev environment and warm up.
 
