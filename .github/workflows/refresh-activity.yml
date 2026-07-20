@@ -2,7 +2,7 @@ name: Refresh activity
 
 on:
   schedule:
-    - cron: '0 * * * *'   # hourly
+    - cron: '0 21 * * *'   # daily at 21:00 UTC (~07:30 ACST). Manual trigger via workflow_dispatch for immediate refresh.
   workflow_dispatch:
 
 permissions:
