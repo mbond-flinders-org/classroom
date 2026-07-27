@@ -136,11 +136,17 @@ async function fileWelcomeIssue(repo, body) {
 
 async function handleSolo(asg) {
   const repos = await readRepos(asg.id);
-  const existing = repos.find(r => r.student.toLowerCase() === author.toLowerCase());
-  if (existing) {
-    await commentAndClose(`✅ You already have a repo for this assignment: https://github.com/${org}/${existing.repo}\n\nCheck https://github.com/${org}/${existing.repo}/invitations if you missed the email.`);
-    await scrubAndClose();
-    return;
+  const existingIdx = repos.findIndex(r => r.student.toLowerCase() === author.toLowerCase());
+  if (existingIdx !== -1) {
+    const existing = repos[existingIdx];
+    if (await repoExists(existing.repo)) {
+      await commentAndClose(`✅ You already have a repo for this assignment: https://github.com/${org}/${existing.repo}\n\nCheck https://github.com/${org}/${existing.repo}/invitations if you missed the email.`);
+      await scrubAndClose();
+      return;
+    }
+    // Recorded repo doesn't exist any more — student (or teacher) deleted it. Prune and re-create.
+    console.log(`Stale state entry for ${author}: ${existing.repo} no longer exists. Pruning.`);
+    repos.splice(existingIdx, 1);
   }
 
   const name = repoNameForSolo(asg, author);
@@ -168,9 +174,15 @@ async function handleGroupCreate(asg, slug) {
     return reject(`Team \`${slug}\` already exists. Ask the team for their share link, or pick a different slug.`);
   }
 
-  const alreadyIn = groups.find(g => g.members.map(m => m.toLowerCase()).includes(author.toLowerCase()));
-  if (alreadyIn) {
-    return reject(`You're already in team \`${alreadyIn.slug}\` for this assignment (repo: https://github.com/${org}/${alreadyIn.repo}). One student = one team per assignment.`);
+  const alreadyInIdx = groups.findIndex(g => g.members.map(m => m.toLowerCase()).includes(author.toLowerCase()));
+  if (alreadyInIdx !== -1) {
+    const alreadyIn = groups[alreadyInIdx];
+    if (await repoExists(alreadyIn.repo)) {
+      return reject(`You're already in team \`${alreadyIn.slug}\` for this assignment (repo: https://github.com/${org}/${alreadyIn.repo}). One student = one team per assignment.`);
+    }
+    // Recorded team repo is gone — prune the whole team entry (it's dead) and let this create fall through.
+    console.log(`Stale team entry ${alreadyIn.slug}: repo ${alreadyIn.repo} no longer exists. Pruning.`);
+    groups.splice(alreadyInIdx, 1);
   }
 
   const name = repoNameForGroup(asg, slug);
