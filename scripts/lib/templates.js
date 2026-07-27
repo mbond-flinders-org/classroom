@@ -120,7 +120,18 @@ export function assignmentReadme({ org, classroomRepo, assignment }) {
     );
   }
 
-  lines.push(`[← back to ${a.topic}](../)`);
+  lines.push(
+    '---',
+    '',
+    '## Already accepted? Where\'s my repo?',
+    '',
+    `- Check your **GitHub email inbox** for the collaborator invite.`,
+    `- Or visit **[https://github.com/${org}](https://github.com/${org})** — your repo will appear in the list once you've accepted the invite.`,
+    `- Or use the **[collaborator filter on your profile](https://github.com/settings/repositories)**.`,
+    `- Your repo won't appear on your own "Your repositories" page — you're a collaborator, not the owner. Bookmark the direct URL instead.`,
+    '',
+    `[← back to ${a.topic}](../)`,
+  );
   return lines.join('\n');
 }
 
@@ -217,6 +228,17 @@ export function welcomeIssue({ org, repo, assignment, isTeamLeader, teamSlug, jo
   }
 
   lines.push(
+    '## 🔖 Bookmark this repo',
+    '',
+    `Your repo **will not appear** on your "Your repositories" page — you're a collaborator, not the owner. Bookmark this URL now:`,
+    '',
+    `**https://github.com/${org}/${repo}**`,
+    '',
+    'You can also find it any time by visiting:',
+    '',
+    `- **https://github.com/${org}** (all repos you can see in the org — the shortest route)`,
+    `- **https://github.com/<your-username>?tab=repositories&type=collaborator** (GitHub\'s collaborator filter)`,
+    '',
     '## Next steps',
     '',
     `- Read the README in your repo.`,
