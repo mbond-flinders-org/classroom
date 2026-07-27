@@ -47,19 +47,37 @@ async function commentAndClose(body) {
   });
 }
 
-async function deleteIssueIfPossible() {
-  if (!issueNodeId) {
-    console.log('No ISSUE_NODE_ID provided; falling back to close-only.');
-    return;
+// GitHub Apps can't delete issues via GraphQL (owner-only permission).
+// Best we can do: rename the title to strip PII, blank the body, close, lock.
+// The issue.user.login (avatar) remains visible in the timeline — that's a
+// GitHub-side attribution we can't remove.
+async function scrubAndClose() {
+  try {
+    await octokit.issues.update({
+      owner: org, repo: classroomRepo, issue_number: issueNumber,
+      title: `processed #${issueNumber}`,
+      body: '_This join request was processed by the classroom bot and closed. If you\'re looking for your assignment repo, check your GitHub email inbox for the collaborator invite._',
+      state: 'closed',
+    });
+  } catch (e) {
+    console.error(`scrubAndClose update failed: ${e.message}`);
   }
   try {
-    await octokit.graphql(
-      `mutation($id: ID!) { deleteIssue(input: { issueId: $id }) { repository { id } } }`,
-      { id: issueNodeId },
-    );
-    console.log(`Deleted issue #${issueNumber} (${issueNodeId}).`);
+    await octokit.issues.lock({
+      owner: org, repo: classroomRepo, issue_number: issueNumber,
+      lock_reason: 'resolved',
+    });
   } catch (e) {
-    console.error(`deleteIssue failed (will leave closed): ${e.message}`);
+    console.error(`scrubAndClose lock failed: ${e.message}`);
+  }
+  // Best-effort delete for future when perms allow. Silent on fail.
+  if (issueNodeId) {
+    try {
+      await octokit.graphql(
+        `mutation($id: ID!) { deleteIssue(input: { issueId: $id }) { repository { id } } }`,
+        { id: issueNodeId },
+      );
+    } catch { /* expected — Apps can't delete */ }
   }
 }
 
@@ -121,7 +139,7 @@ async function handleSolo(asg) {
   const existing = repos.find(r => r.student.toLowerCase() === author.toLowerCase());
   if (existing) {
     await commentAndClose(`✅ You already have a repo for this assignment: https://github.com/${org}/${existing.repo}\n\nCheck https://github.com/${org}/${existing.repo}/invitations if you missed the email.`);
-    await deleteIssueIfPossible();
+    await scrubAndClose();
     return;
   }
 
@@ -138,7 +156,7 @@ async function handleSolo(asg) {
     org, repo: name, assignment: asg, isTeamLeader: false,
   }));
 
-  await deleteIssueIfPossible();
+  await scrubAndClose();
 }
 
 async function handleGroupCreate(asg, slug) {
@@ -171,7 +189,7 @@ async function handleGroupCreate(asg, slug) {
     maxTeammates: asg.maxSize - 1,
   }));
 
-  await deleteIssueIfPossible();
+  await scrubAndClose();
 }
 
 async function handleGroupJoin(asg, slug) {
@@ -199,7 +217,7 @@ async function handleGroupJoin(asg, slug) {
     isTeamLeader: false, teamSlug: slug,
   }));
 
-  await deleteIssueIfPossible();
+  await scrubAndClose();
 }
 
 // ----- Entry ----------------------------------------------------------------
