@@ -80,7 +80,7 @@ git config --global user.name "Your Name"
 ```
 
 ```
-git config --global user.email "your.id@flinders.edu.au"
+git config --global user.email "your@email.com"
 ```
 
 Use the same email that's on your GitHub account, otherwise your commits won't be linked to your profile.
@@ -91,16 +91,18 @@ Open the **Welcome — read me first** issue in your repo and copy the `git clon
 
 > **Paste one line at a time.** Copy the first line, press Enter, wait for it to finish, *then* do the second. If you paste both lines together and Git stops to ask you something, your second line gets typed into that question instead of running as a command — and you'll get a confusing `Invalid username or token` error.
 
+Replace [[yourname]] with your own identifier from GitHub:
+
 First:
 
 ```
-git clone https://github.com/mbond-flinders-org/adv-soft-dev-p1-welcomeback-yourname.git
+git clone https://github.com/mbond-flinders-org/adv-soft-dev-p1-welcomeback-[[yourname]].git
 ```
 
 Wait for it to finish, then:
 
 ```
-cd adv-soft-dev-p1-welcomeback-yourname
+cd adv-soft-dev-p1-welcomeback-[[yourname]]
 ```
 
 If you did Step 2, this runs without asking anything.
