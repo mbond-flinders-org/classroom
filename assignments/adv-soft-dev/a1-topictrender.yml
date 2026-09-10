@@ -1,0 +1,8 @@
+id: a1-topictrender
+topic: adv-soft-dev
+title: "A1 — Topic Trender"
+template: mbond-flinders-org/A1-TopicTrender
+type: group
+maxSize: 2
+description: |
+  Pair assignment. Java/Maven project. Read `1-START-HERE.md` inside the repo first.
