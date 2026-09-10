@@ -1,0 +1,8 @@
+id: p4-topictrender
+topic: adv-soft-dev
+title: "P4 — Topic Trender"
+template: mbond-flinders-org/P4-TopicTrender
+type: group
+maxSize: 2
+description: |
+  Practical 4 — pair work. Java/Maven project. Read `1-START-HERE.md` inside the repo first.
