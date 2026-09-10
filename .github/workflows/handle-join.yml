@@ -25,6 +25,7 @@ jobs:
         with:
           path: classroom
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
