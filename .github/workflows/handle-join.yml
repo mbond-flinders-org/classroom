@@ -70,10 +70,12 @@ jobs:
       - name: Commit changes to classroom (public)
         working-directory: classroom
         env:
-          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           git config user.name  "classroom-bot"
           git config user.email "classroom-bot@users.noreply.github.com"
+          # Push as the App so branch-protection bypass applies (github-actions[bot] isn't bypassed).
+          git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${{ github.repository }}.git"
           git add README.md assignments/
           if git diff --cached --quiet; then
             echo "No public-repo changes."
