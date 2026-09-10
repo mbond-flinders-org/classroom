@@ -6,7 +6,7 @@ Course assignments. Pick a topic.
 
 ## Topics
 
-- [**adv-soft-dev**](./assignments/adv-soft-dev/) — 3 assignments
+- [**adv-soft-dev**](./assignments/adv-soft-dev/) — 4 assignments
 
 ## How it works
 
