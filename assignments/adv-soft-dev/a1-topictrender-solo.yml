@@ -1,0 +1,9 @@
+id: a1-topictrender-solo
+topic: adv-soft-dev
+title: "A1 — Topic Trender (individual)"
+template: mbond-flinders-org/A1-TopicTrender-Solo
+type: solo
+year: 2027
+description: |
+  Individual assignment, for the online offering. Java/Maven project. Read
+  `1-START-HERE.md` inside the repo first.

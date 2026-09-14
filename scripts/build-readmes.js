@@ -47,7 +47,10 @@ export async function regenerateAll({ org, classroomRepo } = {}) {
     byTopic.get(a.topic).push(a);
   }
   for (const list of byTopic.values()) {
-    list.sort((x, y) => String(x.dueDate || '').localeCompare(String(y.dueDate || '')) || x.id.localeCompare(y.id));
+    list.sort((x, y) =>
+      (Number(y.year) || 0) - (Number(x.year) || 0) ||
+      String(x.dueDate || '').localeCompare(String(y.dueDate || '')) ||
+      x.id.localeCompare(y.id));
   }
 
   // ---- Public repo (ROOT) ----

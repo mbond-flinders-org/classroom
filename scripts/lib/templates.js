@@ -65,12 +65,13 @@ export function topicReadme({ topic, assignments }) {
   const lines = [
     `# Topic: ${topic}`,
     '',
-    '| Assignment | Type | Open |',
-    '|---|---|---|',
+    '| Assignment | Year | Type | Open |',
+    '|---|---|---|---|',
   ];
   for (const a of assignments) {
     const type = a.type === 'group' ? `group (≤${a.maxSize})` : 'solo';
-    lines.push(`| ${escapeMd(a.title || a.id)} | ${type} | [→](./${a.id}/) |`);
+    const year = a.year ? String(a.year) : '—';
+    lines.push(`| ${escapeMd(a.title || a.id)} | ${year} | ${type} | [→](./${a.id}/) |`);
   }
   lines.push('', '[← back to topics](../../)');
   return lines.join('\n');
