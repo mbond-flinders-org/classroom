@@ -1,9 +1,12 @@
 // Cron-triggered. For each assignment:
 //   1. Fetch latest commit metadata for every recorded repo.
 //   2. If a repo returns 404 (deleted by teacher/student), prune the state entry.
-//   3. Write state/<asg-id>/activity.json + rebuild rosters.
+//   3. Cross-check each repo's collaborator list against the recorded students.
+//      Prune students who are no longer collaborators (teacher removed them).
+//      For groups: drop the whole group if no recorded members remain.
+//   4. Write state/<asg-id>/activity.json + rebuild rosters.
 //
-// Auto-pruning keeps the roster honest when repos are removed out-of-band.
+// Auto-pruning keeps the roster honest when repos or collabs are changed out-of-band.
 
 import { Octokit } from '@octokit/rest';
 import {
@@ -25,6 +28,19 @@ if (!org || !token) {
 }
 
 const octokit = new Octokit({ auth: token });
+
+async function collabLoginsFor(repo) {
+  try {
+    const collabs = await octokit.paginate(octokit.repos.listCollaborators, {
+      owner: org, repo, affiliation: 'all', per_page: 100,
+    });
+    return new Set(collabs.map(c => c.login.toLowerCase()));
+  } catch (e) {
+    if (e.status === 404) return null;
+    console.error(`collabLoginsFor(${repo}) failed:`, e.message);
+    return null;
+  }
+}
 
 async function activityFor(repo) {
   try {
@@ -68,42 +84,71 @@ async function main() {
       const repos = await readRepos(a.id);
       const activityByRepo = new Map();
       const keptRepos = [];
-      const prunedRepos = [];
+      const prunedGone = [];
+      const prunedRevoked = [];
       for (const entry of repos) {
         const act = await activityFor(entry.repo);
         if (act.gone) {
-          prunedRepos.push(entry);
+          prunedGone.push(entry);
+          continue;
+        }
+        const collabs = await collabLoginsFor(entry.repo);
+        if (collabs && !collabs.has(entry.student.toLowerCase())) {
+          // Student was removed as collab but repo still exists.
+          // Drop the state entry so the roster stops showing them,
+          // and so they can re-Accept (handle-join's stale-check
+          // will succeed since state no longer has their entry).
+          prunedRevoked.push(entry);
           continue;
         }
         keptRepos.push(entry);
         activityByRepo.set(entry.repo, act);
       }
-      if (prunedRepos.length) {
-        console.log(`[${a.id}] Pruned ${prunedRepos.length} deleted repo(s): ${prunedRepos.map(r => r.repo).join(', ')}`);
+      if (prunedGone.length || prunedRevoked.length) {
+        if (prunedGone.length) console.log(`[${a.id}] Pruned ${prunedGone.length} deleted repo(s): ${prunedGone.map(r => r.repo).join(', ')}`);
+        if (prunedRevoked.length) console.log(`[${a.id}] Pruned ${prunedRevoked.length} revoked-collab entry(ies): ${prunedRevoked.map(r => r.student).join(', ')}`);
         await writeRepos(a.id, keptRepos);
       }
       await writeActivity(a.id, [...activityByRepo.values()]);
-      console.log(`[${a.id}] activity: ${activityByRepo.size} live / ${prunedRepos.length} pruned`);
+      console.log(`[${a.id}] activity: ${activityByRepo.size} live / ${prunedGone.length} gone / ${prunedRevoked.length} revoked`);
     } else {
       const groups = await readGroups(a.id);
       const activityByRepo = new Map();
       const keptGroups = [];
-      const prunedGroups = [];
+      const prunedGone = [];
+      let membersRevokedTotal = 0;
+      const emptied = [];
       for (const g of groups) {
         const act = await activityFor(g.repo);
         if (act.gone) {
-          prunedGroups.push(g);
+          prunedGone.push(g);
           continue;
         }
-        keptGroups.push(g);
+        const collabs = await collabLoginsFor(g.repo);
+        const originalMembers = g.members.slice();
+        const keptMembers = collabs
+          ? originalMembers.filter(m => collabs.has(m.toLowerCase()))
+          : originalMembers;
+        const revoked = originalMembers.length - keptMembers.length;
+        membersRevokedTotal += revoked;
+        if (revoked) {
+          console.log(`[${a.id}/${g.slug}] Pruned ${revoked} revoked member(s): ${originalMembers.filter(m => !keptMembers.includes(m)).join(', ')}`);
+        }
+        if (!keptMembers.length) {
+          // Whole team was emptied out — drop the group entirely.
+          emptied.push(g);
+          continue;
+        }
+        keptGroups.push({ ...g, members: keptMembers });
         activityByRepo.set(g.repo, act);
       }
-      if (prunedGroups.length) {
-        console.log(`[${a.id}] Pruned ${prunedGroups.length} deleted team repo(s): ${prunedGroups.map(g => g.slug).join(', ')}`);
+      if (prunedGone.length || membersRevokedTotal || emptied.length) {
+        if (prunedGone.length) console.log(`[${a.id}] Pruned ${prunedGone.length} deleted team repo(s): ${prunedGone.map(g => g.slug).join(', ')}`);
+        if (emptied.length) console.log(`[${a.id}] Emptied team(s) dropped: ${emptied.map(g => g.slug).join(', ')}`);
         await writeGroups(a.id, keptGroups);
       }
       await writeActivity(a.id, [...activityByRepo.values()]);
-      console.log(`[${a.id}] activity: ${activityByRepo.size} live / ${prunedGroups.length} pruned`);
+      console.log(`[${a.id}] teams: ${keptGroups.length} live / ${prunedGone.length} gone / ${emptied.length} emptied • members revoked: ${membersRevokedTotal}`);
     }
   }
   await regenerateAll();
