@@ -1,6 +1,9 @@
-// Cron-triggered. For each assignment, fetches latest commit metadata for
-// every created repo and writes state/<asg-id>/activity.json. Roster README
-// joins this in next build-readmes run.
+// Cron-triggered. For each assignment:
+//   1. Fetch latest commit metadata for every recorded repo.
+//   2. If a repo returns 404 (deleted by teacher/student), prune the state entry.
+//   3. Write state/<asg-id>/activity.json + rebuild rosters.
+//
+// Auto-pruning keeps the roster honest when repos are removed out-of-band.
 
 import { Octokit } from '@octokit/rest';
 import {
@@ -8,6 +11,8 @@ import {
   readGroups,
   readRepos,
   writeActivity,
+  writeGroups,
+  writeRepos,
 } from './lib/state.js';
 import { regenerateAll } from './build-readmes.js';
 
@@ -28,8 +33,6 @@ async function activityFor(repo) {
     });
     if (!data.length) return { repo, lastCommit: null, commitCount: 0, lastAuthor: null };
     const c = data[0];
-    // commitCount: cheap-ish — use the contributors stats endpoint isn't reliable;
-    // instead, GET /repos/{owner}/{repo}/commits with per_page=1 + parse Link header for last page.
     let commitCount = 1;
     const linkHeader = (await octokit.request('GET /repos/{owner}/{repo}/commits', {
       owner: org, repo, per_page: 1,
@@ -45,8 +48,12 @@ async function activityFor(repo) {
       lastAuthor: c.author?.login || c.commit?.author?.name || null,
     };
   } catch (e) {
-    if (e.status === 404 || e.status === 409) {
-      // 409 = empty repo (no commits beyond initial template). Treat as zero.
+    if (e.status === 404) {
+      // Repo is gone — pruning signal.
+      return { repo, gone: true };
+    }
+    if (e.status === 409) {
+      // 409 = empty repo (no commits). Alive but no activity.
       return { repo, lastCommit: null, commitCount: 0, lastAuthor: null };
     }
     console.error(`activityFor(${repo}) failed:`, e.message);
@@ -57,22 +64,50 @@ async function activityFor(repo) {
 async function main() {
   const assignments = await listAssignments();
   for (const a of assignments) {
-    const repos = a.type === 'solo'
-      ? (await readRepos(a.id)).map(r => r.repo)
-      : (await readGroups(a.id)).map(g => g.repo);
-    if (!repos.length) {
-      await writeActivity(a.id, []);
-      continue;
+    if (a.type === 'solo') {
+      const repos = await readRepos(a.id);
+      const activityByRepo = new Map();
+      const keptRepos = [];
+      const prunedRepos = [];
+      for (const entry of repos) {
+        const act = await activityFor(entry.repo);
+        if (act.gone) {
+          prunedRepos.push(entry);
+          continue;
+        }
+        keptRepos.push(entry);
+        activityByRepo.set(entry.repo, act);
+      }
+      if (prunedRepos.length) {
+        console.log(`[${a.id}] Pruned ${prunedRepos.length} deleted repo(s): ${prunedRepos.map(r => r.repo).join(', ')}`);
+        await writeRepos(a.id, keptRepos);
+      }
+      await writeActivity(a.id, [...activityByRepo.values()]);
+      console.log(`[${a.id}] activity: ${activityByRepo.size} live / ${prunedRepos.length} pruned`);
+    } else {
+      const groups = await readGroups(a.id);
+      const activityByRepo = new Map();
+      const keptGroups = [];
+      const prunedGroups = [];
+      for (const g of groups) {
+        const act = await activityFor(g.repo);
+        if (act.gone) {
+          prunedGroups.push(g);
+          continue;
+        }
+        keptGroups.push(g);
+        activityByRepo.set(g.repo, act);
+      }
+      if (prunedGroups.length) {
+        console.log(`[${a.id}] Pruned ${prunedGroups.length} deleted team repo(s): ${prunedGroups.map(g => g.slug).join(', ')}`);
+        await writeGroups(a.id, keptGroups);
+      }
+      await writeActivity(a.id, [...activityByRepo.values()]);
+      console.log(`[${a.id}] activity: ${activityByRepo.size} live / ${prunedGroups.length} pruned`);
     }
-    const out = [];
-    for (const repo of repos) {
-      out.push(await activityFor(repo));
-    }
-    await writeActivity(a.id, out);
-    console.log(`Refreshed activity for ${a.id}: ${out.length} repos`);
   }
   await regenerateAll();
-  console.log('Activity refresh complete.');
+  console.log('Activity refresh + prune complete.');
 }
 
 main().catch(e => {
